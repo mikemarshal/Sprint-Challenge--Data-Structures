@@ -1,60 +1,5 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable class-methods-use-this */
-const { LimitedArray, getIndexBelowMax } = require('./hash-table-helpers');
-
-class LinkedList {
-  constructor() {
-    this.head = null;
-    this.tail = null;
-    // Do not modify anything inside of the constructor
-  }
-  // Wraps the given value in a node object and adds the node to the tail of the list
-  // If the list is empty, the new element is considered the tail as well as the head
-  // If there is one element in the list before the new element is added, the new element becomes the tail of the list
-  addToTail(values) {
-    const newNode = {
-      next: null,
-      value: values,
-    };
-    if (this.head === null) {
-      this.head = newNode;
-      this.tail = newNode;
-      return;
-    }
-
-    this.tail.next = newNode;
-    this.tail = newNode;
-  }
-  // Removes the current head node from the list, replacing it with the next element in the list
-  // Returns the value of the removed node
-  removeHead() {
-    // need to check if there is a head node
-    if (this.head === null) return;
-    // check if head has a next
-    if (this.head.next === null) {
-      const head = this.head;
-      this.head = null;
-      this.tail = null;
-      return head.value;
-    }
-    const head = this.head;
-    this.head = this.head.next;
-    return head.value;
-  }
-  // Checks the linked list for the given value
-  // Returns true if the the value is found in the list, false otherwise
-  contains(value) {
-    // start at the head
-    let node = this.head;
-    while (node !== null) {
-      if (node.value === value) {
-        return true;
-      }
-      node = node.next;
-    }
-    return false;
-  }
-}
+/* eslint-disable */
+const { LimitedArray, getIndexBelowMax, LinkedList } = require('./hash-table-helpers');
 
 class HashTable {
   constructor(limit = 8) {
@@ -89,12 +34,11 @@ class HashTable {
   // If the key already exists in the bucket, the newer value should overwrite the older value associated with that key
   insert(key, value) {
     if (this.capacityIsFull()) this.resize();
-    const index = getIndexBelowMax(key.toString(), this.limit);
-    let bucket = this.storage.get(index) || [];
+    const index = getIndexBelowMax(key.toString(), this.limit); // get the index of the bucket
+    let bucket = this.storage.get(index) || new LinkedList(); // set bucket = the linked list in the bucket
 
-    bucket = bucket.filter(item => item[0] !== key);
-    bucket.push([key, value]);
-    this.storage.set(index, bucket);
+    bucket.replace([key, value]); // replace the value if it exists, otherwise just insert it to the tail of the LL (checks if it exists first)
+    this.storage.set(index, bucket); // set the bucket equal to the new LL
   }
   // Removes the key, value pair from the hash table
   // Fetch the bucket associated with the given key using the getIndexBelowMax function
@@ -104,7 +48,8 @@ class HashTable {
     let bucket = this.storage.get(index);
 
     if (bucket) {
-      bucket = bucket.filter(item => item[0] !== key);
+      // bucket = bucket.filter(item => item[0] !== key);
+      bucket = bucket.removeSpot(key);
       this.storage.set(index, bucket);
     }
   }
@@ -114,12 +59,14 @@ class HashTable {
   retrieve(key) {
     const index = getIndexBelowMax(key.toString(), this.limit);
     const bucket = this.storage.get(index);
+
     let retrieved;
     if (bucket) {
-      retrieved = bucket.filter(item => item[0] === key)[0];
+      retrieved = bucket.contains(key);
+      // retrieved = bucket.filter(item => item[0] === key)[0];
     }
 
-    return retrieved ? retrieved[1] : undefined;
+    return retrieved ? retrieved : undefined;
   }
 }
 
